@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" alt="Claude Prewarm — start Claude before you start coding" width="760">
+  <img src="docs/banner.png" alt="Claude Prewarm — start your 5-hour window before you start coding" width="900">
 </p>
 
 <h1 align="center">Claude Prewarm</h1>

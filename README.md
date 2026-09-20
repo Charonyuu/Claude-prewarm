@@ -36,9 +36,24 @@ Same quota, earlier window. You reach your next reset sooner in the working day.
 
 ## Install
 
+**One command:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Charonyuu/Claude-prewarm/main/install.sh | bash
+```
+
+Downloads the latest release, checks Apple's notarization, installs it to
+`/Applications` and launches it.
+
+**Or by hand:**
+
 1. **[Download the latest dmg](https://github.com/Charonyuu/Claude-prewarm/releases/latest)**
 2. Open it, drag **Claude Prewarm** into Applications
 3. Launch it — a bolt appears in your menu bar
+
+**Or ask Claude Code to do it**, since you already have it:
+
+> Install Claude Prewarm from github.com/Charonyuu/Claude-prewarm
 
 Signed and notarized by Apple, so it opens with no security warnings.
 

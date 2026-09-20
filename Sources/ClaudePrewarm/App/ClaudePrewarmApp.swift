@@ -14,7 +14,7 @@ struct ClaudePrewarmApp: App {
             )
             .environmentObject(state)
         } label: {
-            Image(systemName: state.menuBarSymbol)
+            Image(nsImage: MenuBarIcon.image(for: state.status))
         }
         .menuBarExtraStyle(.window)
     }

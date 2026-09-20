@@ -333,13 +333,4 @@ final class AppState: ObservableObject {
 extension AppState {
     /// One shared instance: the menu bar scene and the AppKit settings window share it.
     static let shared = AppState()
-
-    var menuBarSymbol: String {
-        switch status {
-        case .active: return "bolt.fill"
-        case .warming: return "bolt.horizontal.fill"
-        case .setupRequired: return "bolt.slash.fill"
-        case .error: return "exclamationmark.triangle.fill"
-        }
-    }
 }

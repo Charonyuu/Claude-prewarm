@@ -42,6 +42,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHumanReadableCopyright</key><string>100% local. No API keys. No telemetry.</string>
+    <key>NSAppleEventsUsageDescription</key><string>Claude Prewarm opens Terminal so you can sign in to Claude Code.</string>
 </dict>
 </plist>
 PLIST

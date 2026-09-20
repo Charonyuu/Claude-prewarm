@@ -13,7 +13,7 @@ struct MenuBarView: View {
             if let error = state.runtime.lastError {
                 errorBox(error)
             }
-            warmButton
+            actionButton
             if let hint = state.warmNowHint {
                 Text(hint)
                     .font(.system(size: 11))
@@ -101,6 +101,32 @@ struct MenuBarView: View {
                     .fill(Theme.danger.opacity(0.12))
             )
             .padding(.top, 12)
+    }
+
+    @ViewBuilder
+    private var actionButton: some View {
+        switch state.setupAction {
+        case .installCLI:
+            Button(action: state.openInstallInstructions) {
+                HStack(spacing: 7) {
+                    Image(systemName: "arrow.down.circle.fill").font(.system(size: 12, weight: .bold))
+                    Text("Install Claude Code")
+                }
+            }
+            .buttonStyle(AccentButtonStyle(height: 40))
+            .padding(.top, 14)
+        case .signIn:
+            Button(action: state.openTerminalToSignIn) {
+                HStack(spacing: 7) {
+                    Image(systemName: "terminal.fill").font(.system(size: 12, weight: .bold))
+                    Text("Sign in to Claude")
+                }
+            }
+            .buttonStyle(AccentButtonStyle(height: 40))
+            .padding(.top, 14)
+        case .none:
+            warmButton
+        }
     }
 
     private var warmButton: some View {

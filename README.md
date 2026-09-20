@@ -1,123 +1,162 @@
-# Claude Prewarm
+<p align="center">
+  <img src="docs/banner.png" alt="Claude Prewarm — start Claude before you start coding" width="760">
+</p>
 
-A macOS menu bar app that fires one tiny Claude Haiku request before your workday starts,
-so your first 5-hour usage window opens early instead of when you sit down.
+<h1 align="center">Claude Prewarm</h1>
+
+<p align="center">
+  A macOS menu bar app that starts your Claude usage window before you sit down.<br>
+  <a href="https://github.com/Charonyuu/Claude-prewarm/releases/latest"><b>Download for macOS</b></a>
+  · 100% local · No API keys · No telemetry
+</p>
+
+---
+
+## The problem
+
+Claude Code gives you a rolling **5-hour usage window**. The clock starts on your
+first request of the day — so if you start work at 09:00, your window runs to 14:00,
+and you spend the whole afternoon waiting for it to reset.
+
+## What this does
+
+Claude Prewarm sends **one tiny request** at a time you choose, before work.
 
 ```
-09:00 work start  →  2 hours before  →  07:00 warm  →  ~12:00 next window
+Without Prewarm                    With Prewarm
+09:00  first request               07:00  app warms for you
+14:00  window resets               09:00  you start work
+       ↑ mid-afternoon             12:00  window resets
+                                          ↑ before lunch
 ```
 
-It does not add quota. It only moves the window earlier.
+Same quota, earlier window. You reach your next reset sooner in the working day.
 
-```
-100% local.
-No API keys.
-No telemetry.
-```
+> It does **not** give you more usage. It only moves the window.
 
-## Requirements
+## Install
 
-- macOS 14 or later
-- Claude Code CLI installed and signed in (`claude` in your PATH)
+1. **[Download the latest dmg](https://github.com/Charonyuu/Claude-prewarm/releases/latest)**
+2. Open it, drag **Claude Prewarm** into Applications
+3. Launch it — a bolt appears in your menu bar
 
-## Build and install
+Signed and notarized by Apple, so it opens with no security warnings.
+
+**You need:**
+
+- macOS 14 (Sonoma) or later
+- [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) installed and signed in
+
+The app uses the Claude CLI you are already signed in to. There is no API key to
+enter and nothing to configure beyond your working hours.
+
+## Using it
+
+Click the bolt in your menu bar.
+
+| Light | Dark |
+|---|---|
+| <img src="docs/panel-light.png" width="330"> | <img src="docs/panel-dark.png" width="330"> |
+
+**Next warmup** — when the app will warm next
+**Work starts** — the time you told it you start
+**Claude resets around** — when your current 5-hour window ends
+**Warm Now** — warm immediately, if you want to start the clock by hand
+**5h limit / Weekly limit** — how much of each window you have spent, read live
+from Claude itself, refreshed every time you open the panel
+
+### Settings
+
+| Light | Dark |
+|---|---|
+| <img src="docs/settings-light.png" width="330"> | <img src="docs/settings-dark.png" width="330"> |
+
+- **Work days** — pick any combination, at least one
+- **I start working at** — your usual start time
+- **Prewarm** — how far ahead to warm: 30 minutes, 1, 2, 3 or 4 hours
+- **Launch at login** — so it is always ready
+
+With the defaults — Mon–Fri, 09:00, 2 hours before — the app warms at 07:00 on
+weekdays and your window resets around 12:00.
+
+### If Claude Code is missing
+
+<img src="docs/setup-required.png" width="330">
+
+The app tells you and links to the install instructions. Once the CLI is installed
+and signed in, open the panel again and it picks it up.
+
+## Good to know
+
+**What is actually sent?** One request to Haiku, the smallest model, saying
+`Reply only OK.` It costs a fraction of a cent of your quota and takes a few seconds.
+
+**Will it warm twice?** No. It refuses to warm again within 10 minutes, and it never
+retroactively warms a time that already passed — so opening the app in the afternoon
+does not fire a warm you did not ask for.
+
+**What if my Mac was asleep?** If the warm was missed and it is less than an hour
+late on a work day, it runs when your Mac wakes. Later than that, it waits for
+tomorrow.
+
+**Does it interrupt me?** Only when something fails. A successful warm is silent.
+
+**Is any of this sent anywhere?** No. Settings live in `UserDefaults` on your Mac.
+The app talks to nothing except the Claude CLI already installed on your machine.
+
+## Build from source
 
 ```bash
-./build.sh            # builds build/Claude Prewarm.app (universal)
-./build.sh --install  # also copies it to /Applications and launches it
-./build.sh --release  # Developer ID signature, dmg, notarization, staple
+git clone https://github.com/Charonyuu/Claude-prewarm.git
+cd Claude-prewarm
+./build.sh --install
 ```
 
-Install into `/Applications` before turning on **Launch at login** — `SMAppService`
-refuses to register an app running from a build folder.
+Needs Xcode. The app is a Swift package — `Sources/ClaudePrewarm` holds everything.
 
-## Verify
+```
+App/          App entry, AppState, settings window
+Models/       AppSettings, RuntimeState, WarmLog, UsageSnapshot
+Services/     ClaudeRunner, UsageReader, ProcessRunner, ScheduleService,
+              LoginItemService, SettingsStore, NotificationService
+Views/        MenuBarView, SettingsView, Theme
+Utilities/    DateCalculator, ClaudeBinaryFinder
+```
+
+Under the hood it runs:
+
+```bash
+claude -p "Reply only OK." --model haiku --effort low \
+    --no-session-persistence --strict-mcp-config --disable-slash-commands
+```
+
+…in an empty directory, so no project files or `CLAUDE.md` are read, with a 30
+second timeout. The limits block comes from `claude -p "/usage"`.
+
+Run the checks — schedule maths, usage parsing, then one real warm and one real
+usage read:
 
 ```bash
 ./Tools/verify.sh
 ```
 
-Checks the schedule maths (weekend skipping, no back-fill, offsets crossing midnight,
-validation) and the `/usage` parser, then performs one real warm and one real usage
-read through the CLI.
-
-## How it works
-
-| Piece | Behaviour |
-|---|---|
-| Limits block | `claude -p "/usage"`, parsed into the 5-hour and weekly windows; refreshed every 10 minutes, when the panel opens (if over a minute old) and after every warm |
-| Reset shown | The real session reset from `/usage`; falls back to `last warm + 5h` when that is unavailable |
-| Warm command | `claude -p "Reply only OK." --model haiku --effort low --no-session-persistence --strict-mcp-config --disable-slash-commands` |
-| Working directory | An empty temp folder, so no project files or `CLAUDE.md` are read |
-| Binary lookup | `command -v claude` through a login shell, then the usual install paths |
-| Timeout | 30 seconds, then the process is terminated |
-| Next warm | First enabled weekday whose `workStart - offset` is still in the future; a time that already passed today is never back-filled |
-| Duplicate guard | No second warm within 10 minutes; `Warm Now` is disabled during that window |
-| Wake recovery | If a warm was missed while asleep and it is under 60 minutes late on a work day, it runs on wake; otherwise it is skipped |
-| Notifications | Failures only |
-| Storage | `UserDefaults`, plus the last 20 warm log entries |
-
-## Structure
-
-```
-Sources/ClaudePrewarm/
-├── App/          ClaudePrewarmApp, AppState, SettingsWindowController
-├── Models/       AppSettings, RuntimeState, WarmLog, UsageSnapshot
-├── Services/     ClaudeRunner, UsageReader, ProcessRunner, ScheduleService,
-│                 LoginItemService, SettingsStore, NotificationService
-├── Views/        MenuBarView, SettingsView, Theme
-└── Utilities/    DateCalculator, ClaudeBinaryFinder
-```
-
-## Panel
-
-```
-Claude Prewarm
-● Active
-─────────────────────────────
-Next warmup        Tomorrow 07:00
-Work starts                 09:00
-Claude resets around        19:10
-[ ▶ Warm Now ]
-─────────────────────────────
-5h limit                 59% used
-▬▬▬▬▬▬▭▭▭▭▭▭  resets 19:10
-Weekly limit             83% used
-▬▬▬▬▬▬▬▬▬▬▭▭  resets Tomorrow 04:59
-─────────────────────────────
-Settings…
-Quit
-```
-
-The bar fills with what has been spent. It turns amber past 70% and red past 90%.
-
-## Menu bar states
-
-| Dot | Meaning |
-|---|---|
-| Active | Scheduled and ready |
-| Warming… | A request is in flight |
-| Setup Required | `claude` not found |
-| Error | Last warm failed; the reason is shown in the panel |
-
 ## Releasing
 
-`./build.sh --release` signs with Developer ID under the hardened runtime,
-packages a dmg, notarizes it and staples the ticket.
+```bash
+./build.sh --release
+```
 
-Notarization needs credentials in the keychain once. Generate an app-specific
-password at [appleid.apple.com](https://appleid.apple.com) (Sign-In and Security
-› App-Specific Passwords), then:
+Signs with Developer ID under the hardened runtime, builds a dmg, notarizes it and
+staples the ticket. Notarization credentials are stored once:
 
 ```bash
 xcrun notarytool store-credentials "prewarm-notary" \
     --apple-id "<your Apple ID>" \
-    --team-id XADL3RD65Y \
+    --team-id "<your team id>" \
     --password "<app-specific password>"
 ```
 
-Without it the script still produces a signed dmg and tells you what is missing.
-An unnotarized dmg triggers Gatekeeper, so ship notarized builds only.
+Without them the script still produces a signed dmg and says what is missing.
 
 ## Licence
 

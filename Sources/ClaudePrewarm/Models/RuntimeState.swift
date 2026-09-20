@@ -23,6 +23,8 @@ struct RuntimeState {
     var isWarming: Bool = false
     var lastError: String?
     var claudePath: String?
+    /// The CLI is installed but has no usable credentials.
+    var needsSignIn: Bool = false
 
     var status: AppStatus {
         if isWarming { return .warming }

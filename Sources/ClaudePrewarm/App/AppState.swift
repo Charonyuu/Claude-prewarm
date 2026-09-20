@@ -2,6 +2,13 @@ import AppKit
 import Combine
 import Foundation
 
+/// What the panel should offer instead of Warm Now.
+enum SetupAction {
+    case installCLI
+    case signIn
+    case none
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published private(set) var settings: AppSettings
@@ -89,6 +96,35 @@ final class AppState: ObservableObject {
         return "reset time unknown"
     }
 
+    var setupAction: SetupAction {
+        if runtime.claudePath == nil { return .installCLI }
+        if runtime.needsSignIn { return .signIn }
+        return .none
+    }
+
+    /// Opens the official install instructions.
+    func openInstallInstructions() {
+        guard let url = URL(string: "https://docs.claude.com/en/docs/claude-code/setup") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    /// Opens Terminal on `claude`, which is where signing in happens.
+    func openTerminalToSignIn() {
+        let source = """
+        tell application "Terminal"
+            activate
+            do script "claude"
+        end tell
+        """
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        guard error != nil else { return }
+        // Automation permission was refused; just bring Terminal up.
+        if let terminal = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Terminal") {
+            NSWorkspace.shared.openApplication(at: terminal, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
     var canWarmNow: Bool {
         guard runtime.claudePath != nil, !runtime.isWarming else { return false }
         return !warmedRecently
@@ -102,8 +138,9 @@ final class AppState: ObservableObject {
     /// Why Warm Now is unavailable, for the line under the button.
     var warmNowHint: String? {
         if runtime.claudePath == nil {
-            return "Claude CLI not found. Install Claude Code, then reopen this app."
+            return "Claude Code is not installed on this Mac."
         }
+        if runtime.needsSignIn { return nil }
         if runtime.isWarming { return nil }
         if warmedRecently, let last = runtime.lastWarmupAt {
             let remaining = Int((Self.duplicateWarmWindow - Date().timeIntervalSince(last)) / 60) + 1
@@ -187,6 +224,7 @@ final class AppState: ObservableObject {
         let runner = ClaudeRunner(executablePath: path)
         do {
             let result = try await runner.warm()
+            runtime.needsSignIn = false
             runtime.lastWarmupAt = result.startedAt
             runtime.expectedResetAt = result.startedAt.addingTimeInterval(Self.usageWindow)
             SettingsStore.lastWarmupAt = runtime.lastWarmupAt
@@ -194,6 +232,7 @@ final class AppState: ObservableObject {
             append(WarmLog(date: result.startedAt, type: source, success: true, error: nil))
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+            if case WarmError.notSignedIn = error { runtime.needsSignIn = true }
             runtime.lastError = message
             append(WarmLog(date: Date(), type: source, success: false, error: message))
             NotificationService.notifyFailure(message)
@@ -201,6 +240,15 @@ final class AppState: ObservableObject {
 
         runtime.isWarming = false
     }
+
+    #if DEBUG
+    /// Lets the preview renderer show the setup states without uninstalling anything.
+    func overrideForPreview(claudePath: String?, needsSignIn: Bool, error: String?) {
+        runtime.claudePath = claudePath
+        runtime.needsSignIn = needsSignIn
+        runtime.lastError = error
+    }
+    #endif
 
     private func append(_ log: WarmLog) {
         logs.insert(log, at: 0)

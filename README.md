@@ -36,7 +36,15 @@ Same quota, earlier window. You reach your next reset sooner in the working day.
 
 ## Install
 
-**One command:**
+**With Homebrew:**
+
+```bash
+brew install --cask Charonyuu/tap/claude-prewarm
+```
+
+`brew upgrade` keeps it current from then on.
+
+**Or one command, without Homebrew:**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Charonyuu/Claude-prewarm/main/install.sh | bash
@@ -160,6 +168,9 @@ usage read:
 ```bash
 ./build.sh --release
 ```
+
+Then upload the dmg to a GitHub release and bump `version` and `sha256` in
+[the cask](https://github.com/Charonyuu/homebrew-tap/blob/main/Casks/claude-prewarm.rb).
 
 Signs with Developer ID under the hardened runtime, builds a dmg, notarizes it and
 staples the ticket. Notarization credentials are stored once:

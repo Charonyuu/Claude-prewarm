@@ -29,7 +29,7 @@ struct MenuBarView: View {
         }
         .padding(16)
         .frame(width: 300)
-        .onAppear { state.refreshUsageIfStale() }
+        .onAppear { state.refreshUsageOnOpen() }
     }
 
     private var limitsBlock: some View {
@@ -43,13 +43,13 @@ struct MenuBarView: View {
                     title: "5h limit",
                     percent: state.usage?.sessionPercent,
                     detail: state.resetLabel(for: state.usage?.sessionResetAt, raw: state.usage?.sessionResetRaw),
-                    isLoading: state.isLoadingUsage && state.usage == nil
+                    isRefreshing: state.isLoadingUsage
                 )
                 LimitBar(
                     title: "Weekly limit",
                     percent: state.usage?.weeklyPercent,
                     detail: state.resetLabel(for: state.usage?.weeklyResetAt, raw: state.usage?.weeklyResetRaw),
-                    isLoading: state.isLoadingUsage && state.usage == nil
+                    isRefreshing: state.isLoadingUsage
                 )
             }
         }
@@ -72,7 +72,13 @@ struct MenuBarView: View {
                 }
             }
             Spacer(minLength: 0)
+            if state.isLoadingUsage {
+                ProgressView()
+                    .controlSize(.small)
+                    .scaleEffect(0.8)
+            }
         }
+        .frame(height: 46)
     }
 
     private var infoRows: some View {
@@ -141,7 +147,7 @@ private struct LimitBar: View {
     let title: String
     let percent: Int?
     let detail: String
-    let isLoading: Bool
+    let isRefreshing: Bool
 
     private var fraction: Double { Double(min(max(percent ?? 0, 0), 100)) / 100 }
 
@@ -160,7 +166,7 @@ private struct LimitBar: View {
                     .font(.system(size: 13))
                     .foregroundStyle(Theme.label)
                 Spacer(minLength: 12)
-                Text(percent.map { "\($0)% used" } ?? (isLoading ? "Checking…" : "—"))
+                Text(percent.map { "\($0)% used" } ?? (isRefreshing ? "Checking…" : "—"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(percent == nil ? Theme.label : Theme.value)
             }

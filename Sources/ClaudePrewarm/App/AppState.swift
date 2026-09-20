@@ -220,10 +220,11 @@ final class AppState: ObservableObject {
         usageTimer = timer
     }
 
-    /// Called when the panel opens; skips a re-read while the last one is still fresh.
-    func refreshUsageIfStale() {
+    /// Called when the panel opens: the numbers should be current every time it is
+    /// looked at. The short guard only absorbs a reopen within a couple of seconds.
+    func refreshUsageOnOpen() {
         guard let fetchedAt = usage?.fetchedAt else { return refreshUsage() }
-        guard Date().timeIntervalSince(fetchedAt) > 60 else { return }
+        guard Date().timeIntervalSince(fetchedAt) > 5 else { return }
         refreshUsage()
     }
 

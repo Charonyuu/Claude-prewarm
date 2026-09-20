@@ -7,6 +7,7 @@ import SwiftUI
 final class SettingsWindowController {
     private var window: NSWindow?
     private let state: AppState
+    private static let frameName = "ClaudePrewarmSettingsWindow"
 
     init(state: AppState) {
         self.state = state
@@ -16,7 +17,6 @@ final class SettingsWindowController {
         if window == nil { window = makeWindow() }
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
-        window?.center()
         window?.makeKeyAndOrderFront(nil)
     }
 
@@ -39,7 +39,27 @@ final class SettingsWindowController {
         window.isReleasedWhenClosed = false
         window.delegate = WindowDelegate.shared
         WindowDelegate.shared.controller = self
+
+        // Keep wherever the user last dragged it; only place it ourselves the first time.
+        let restored = window.setFrameUsingName(Self.frameName)
+        window.setFrameAutosaveName(Self.frameName)
+        if !restored { center(window) }
         return window
+    }
+
+    /// `NSWindow.center()` sits a third of the way down, which lands under the
+    /// menu bar panel. Put it in the actual middle of the active screen instead.
+    private func center(_ window: NSWindow) {
+        let screen = NSScreen.screens.first { $0.frame.contains(NSEvent.mouseLocation) }
+            ?? NSScreen.main
+        guard let visible = screen?.visibleFrame else { return }
+        let size = window.frame.size
+        window.setFrameOrigin(
+            NSPoint(
+                x: visible.midX - size.width / 2,
+                y: visible.midY - size.height / 2
+            )
+        )
     }
 }
 
